@@ -6,6 +6,7 @@ import (
 	"github.com/codegangsta/cli"
 	gh "github.com/crosbymichael/octokat"
 	"github.com/crosbymichael/pulls"
+	"github.com/crosbymichael/pulls/filters"
 	"os"
 	"time"
 )
@@ -15,7 +16,7 @@ var (
 )
 
 func displayAllPullRequests(c *cli.Context, state string, showAll bool) {
-	filter := getFilter(c)
+	filter := filters.GetPullRequestFilter(c)
 	prs, err := filter(m.GetPullRequestsThatICareAbout(showAll, state))
 	if err != nil {
 		pulls.WriteError("Error getting pull requests %s", err)

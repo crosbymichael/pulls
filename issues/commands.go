@@ -10,6 +10,8 @@ func loadCommands(app *cli.App) {
 	app.Flags = []cli.Flag{
 		cli.StringFlag{"assigned", "", "display issues assigned to <user>. Use '*' for all assigned, or 'none' for all unassigned."},
 		cli.BoolFlag{"no-trunc", "do not truncate the issue name"},
+		cli.BoolFlag{"votes", "show the number of votes '+1'"},
+		cli.IntFlag{"greater", 0, "filter the issues by number of votes"},
 	}
 
 	app.Commands = []cli.Command{
