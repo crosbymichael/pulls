@@ -97,12 +97,7 @@ func getRepoPath(pth, org string) string {
 
 func getMaintainersEmails(pth string) (*[]string, error) {
 	maintainersFileMap := []string{}
-	file, err := os.Open(pth)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return &maintainersFileMap, err
-		}
-	}
+	file, _ := os.Open(pth)
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		strEmail, isEmail, err := getEmailFromLine(scanner.Text())
@@ -378,7 +373,7 @@ func (m *Maintainer) Checkout(pr *gh.PullRequest) error {
 	return nil
 }
 
-func (m *Maintainer) GetFirstIssue(state, sortBy string) (gh.Issue, error) {
+func (m *Maintainer) GetFirstIssue(state, sortBy string) (*gh.Issue, error) {
 	o := &gh.Options{}
 	o.QueryParams = map[string]string{
 		"state":     state,
@@ -389,10 +384,10 @@ func (m *Maintainer) GetFirstIssue(state, sortBy string) (gh.Issue, error) {
 	}
 	issues, err := m.client.Issues(m.repo, o)
 	if err != nil {
-		return gh.Issue{}, err
+		return nil, err
 	}
 	if len(issues) == 0 {
-		return gh.Issue{}, fmt.Errorf("No matching issues")
+		return nil, fmt.Errorf("No matching issues")
 	}
 	return issues[0], nil
 }
@@ -400,7 +395,7 @@ func (m *Maintainer) GetFirstIssue(state, sortBy string) (gh.Issue, error) {
 // GetIssues queries the GithubAPI for all issues matching the state `state` and the
 // assignee `assignee`.
 // See http://developer.github.com/v3/issues/#list-issues-for-a-repository
-func (m *Maintainer) GetIssues(state, assignee string) ([]gh.Issue, error) {
+func (m *Maintainer) GetIssues(state, assignee string) ([]*gh.Issue, error) {
 	o := &gh.Options{}
 	o.QueryParams = map[string]string{
 		"sort":      "updated",
@@ -415,7 +410,7 @@ func (m *Maintainer) GetIssues(state, assignee string) ([]gh.Issue, error) {
 	}
 	prevSize := -1
 	page := 1
-	all := []gh.Issue{}
+	all := []*gh.Issue{}
 	for len(all) != prevSize {
 		o.QueryParams["page"] = strconv.Itoa(page)
 		if issues, err := m.client.Issues(m.repo, o); err != nil {
