@@ -6,6 +6,7 @@ import (
 	"github.com/codegangsta/cli"
 	gh "github.com/crosbymichael/octokat"
 	"github.com/crosbymichael/pulls"
+	"github.com/crosbymichael/pulls/filters"
 	"os"
 	"time"
 )
@@ -14,15 +15,26 @@ var (
 	m *pulls.Maintainer
 )
 
-func displayAllPullRequests(c *cli.Context, state string) {
-	filter := getFilter(c)
-	prs, err := filter(m.GetPullRequests(state))
+func displayAllPullRequests(c *cli.Context, state string, showAll bool) {
+	filter := filters.GetPullRequestFilter(c)
+	prs, err := filter(m.GetPullRequestsThatICareAbout(showAll, state))
 	if err != nil {
 		pulls.WriteError("Error getting pull requests %s", err)
 	}
 
 	fmt.Printf("%c[2K\r", 27)
 	pulls.DisplayPullRequests(c, prs, c.Bool("no-trunc"))
+}
+
+func displayAllPullRequestFiles(c *cli.Context, number string) {
+	prfs, err := m.GetPullRequestFiles(number)
+	if err == nil {
+		i := 1
+		for _, p := range prfs {
+			fmt.Printf("%d: filename %s additions %d deletions %d\n", i, p.FileName, p.Additions, p.Deletions)
+			i++
+		}
+	}
 }
 
 func alruCmd(c *cli.Context) {
@@ -87,10 +99,14 @@ func approveCmd(c *cli.Context) {
 func mainCmd(c *cli.Context) {
 	if !c.Args().Present() {
 		state := "open"
+		showAll := false
 		if c.Bool("closed") {
 			state = "closed"
 		}
-		displayAllPullRequests(c, state)
+		if c.Bool("all") {
+			showAll = true
+		}
+		displayAllPullRequests(c, state, showAll)
 		return
 	}
 
@@ -111,15 +127,32 @@ func mainCmd(c *cli.Context) {
 }
 
 func authCmd(c *cli.Context) {
-	if token := c.String("add"); token != "" {
-		if err := pulls.SaveConfig(pulls.Config{token}); err != nil {
+	config, err := pulls.LoadConfig()
+	if err != nil {
+		config = &pulls.Config{}
+	}
+	token := c.String("add")
+	userName := c.String("user")
+	if userName != "" {
+		config.UserName = userName
+		if err := pulls.SaveConfig(*config); err != nil {
 			pulls.WriteError("%s", err)
 		}
-		return
+	}
+	if token != "" {
+		config.Token = token
+		if err := pulls.SaveConfig(*config); err != nil {
+			pulls.WriteError("%s", err)
+		}
 	}
 	// Display token and user information
 	if config, err := pulls.LoadConfig(); err == nil {
-		fmt.Fprintf(os.Stdout, "Token: %s\n", config.Token)
+		if config.UserName != "" {
+			fmt.Fprintf(os.Stdout, "Token: %s, UserName: %s\n", config.Token, config.UserName)
+		} else {
+
+			fmt.Fprintf(os.Stdout, "Token: %s\n", config.Token)
+		}
 	} else {
 		fmt.Fprintf(os.Stderr, "No token registered\n")
 		os.Exit(1)

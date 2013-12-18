@@ -5,6 +5,7 @@ import (
 	"github.com/codegangsta/cli"
 	gh "github.com/crosbymichael/octokat"
 	"github.com/crosbymichael/pulls"
+	"github.com/crosbymichael/pulls/filters"
 	"os"
 	"path"
 	"time"
@@ -32,7 +33,8 @@ func repositoryInfoCmd(c *cli.Context) {
 }
 
 func mainCmd(c *cli.Context) {
-	issues, err := m.GetIssues("open", c.String("assigned"))
+	filter := filters.GetIssueFilter(c)
+	issues, err := filter(m.GetIssues("open", c.String("assigned")))
 	if err != nil {
 		pulls.WriteError("Error getting issues: %s", err)
 	}
@@ -42,15 +44,32 @@ func mainCmd(c *cli.Context) {
 }
 
 func authCmd(c *cli.Context) {
-	if token := c.String("add"); token != "" {
-		if err := pulls.SaveConfig(pulls.Config{token}); err != nil {
+	config, err := pulls.LoadConfig()
+	if err != nil {
+		config = &pulls.Config{}
+	}
+	token := c.String("add")
+	userName := c.String("user")
+	if userName != "" {
+		config.UserName = userName
+		if err := pulls.SaveConfig(*config); err != nil {
 			pulls.WriteError("%s", err)
 		}
-		return
+	}
+	if token != "" {
+		config.Token = token
+		if err := pulls.SaveConfig(*config); err != nil {
+			pulls.WriteError("%s", err)
+		}
 	}
 	// Display token and user information
 	if config, err := pulls.LoadConfig(); err == nil {
-		fmt.Fprintf(os.Stdout, "Token: %s\n", config.Token)
+		if config.UserName != "" {
+			fmt.Fprintf(os.Stdout, "Token: %s, UserName: %s\n", config.Token, config.UserName)
+		} else {
+
+			fmt.Fprintf(os.Stdout, "Token: %s\n", config.Token)
+		}
 	} else {
 		fmt.Fprintf(os.Stderr, "No token registered\n")
 		os.Exit(1)

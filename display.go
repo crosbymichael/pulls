@@ -82,12 +82,24 @@ func DisplayCommentAdded(cmt gh.Comment) {
 }
 
 // DisplayIssues prints `issues` to standard output in a human-friendly tabulated format.
-func DisplayIssues(c *cli.Context, issues []gh.Issue, notrunc bool) {
+func DisplayIssues(c *cli.Context, issues []*gh.Issue, notrunc bool) {
 	w := newTabwriter()
 	fmt.Fprintf(w, "NUMBER\tLAST UPDATED\tASSIGNEE\tTITLE")
+	if c.Bool("votes") {
+		fmt.Fprintf(w, "\tVOTES")
+	}
 	fmt.Fprintf(w, "\n")
 	for _, p := range issues {
-		fmt.Fprintf(w, "%d\t%s\t%s\t%s\n", p.Number, HumanDuration(time.Since(p.UpdatedAt)), p.Assignee.Login, p.Title)
+		fmt.Fprintf(w, "%d\t%s\t%s\t%s", p.Number, HumanDuration(time.Since(p.UpdatedAt)), p.Assignee.Login, p.Title)
+		if c.Bool("votes") {
+			votes := strconv.Itoa(p.Comments)
+			if p.Comments >= 2 {
+				votes = brush.Green(votes).String()
+			}
+			fmt.Fprintf(w, "\t%s", votes)
+		}
+		fmt.Fprintf(w, "\n")
+
 	}
 
 	if err := w.Flush(); err != nil {
