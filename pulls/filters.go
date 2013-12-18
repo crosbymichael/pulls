@@ -61,6 +61,7 @@ func noMergeFilter(prs []*gh.PullRequest, err error) ([]*gh.PullRequest, error) 
 	}
 	return out, nil
 }
+
 func userFilter(prs []*gh.PullRequest, user string, err error) ([]*gh.PullRequest, error) {
 	if err != nil {
 		return nil, err
