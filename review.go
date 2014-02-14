@@ -2,6 +2,7 @@ package gordon
 
 import (
 	"code.google.com/p/go.codereview/patch"
+	"errors"
 	"io"
 	"io/ioutil"
 	"path"
@@ -66,7 +67,8 @@ type Maintainer struct {
 	Raw      string
 }
 
-func parseMaintainer(line string) *Maintainer {
+func parseMaintainer(line string) (*Maintainer, error) {
+
 	const (
 		commentIndex  = 1
 		targetIndex   = 3
@@ -76,6 +78,12 @@ func parseMaintainer(line string) *Maintainer {
 	)
 	re := regexp.MustCompile("^[ \t]*(#|)((?P<target>[^: ]*) *:|) *(?P<fullname>[a-zA-Z][^<]*) *<(?P<email>[^>]*)> *(\\(@(?P<username>[^\\)]+)\\)|).*$")
 	match := re.FindStringSubmatch(line)
+
+	// If the line format is empty or in a wrong format return an error
+	if len(match) != 8 {
+		return nil, errors.New("The maintainers file content has a wrong format.")
+	}
+
 	return &Maintainer{
 		Active:   match[commentIndex] == "",
 		Target:   path.Base(path.Clean(match[targetIndex])),
@@ -83,5 +91,5 @@ func parseMaintainer(line string) *Maintainer {
 		Email:    strings.Trim(match[emailIndex], " \t"),
 		FullName: strings.Trim(match[fullnameIndex], " \t"),
 		Raw:      line,
-	}
+	}, nil
 }
