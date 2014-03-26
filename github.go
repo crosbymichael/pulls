@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 // Top level type that manages a repository
@@ -34,6 +35,7 @@ type Config struct {
 }
 
 const MaintainerManagersFileName = "MAINTAINERS"
+const NumWorkers = 10
 
 var (
 	maintainerDirMap  = MaintainerManagerDirectoriesMap{}
@@ -241,35 +243,83 @@ func (m *MaintainerManager) GetMaintainersDirMap() *map[string][]*Maintainer {
 	return m.maintainersDirMap
 }
 
-// Return all the pull requests that I care about
-func (m *MaintainerManager) GetPullRequestsThatICareAbout(showAll bool, state, sortQuery string) ([]*gh.PullRequest, error) {
-	prs, err := m.GetPullRequests(state, sortQuery)
-	if err != nil {
-		return nil, err
-	}
-
-	if showAll {
-		return prs, nil
-	}
-
-	filteredPrs := []*gh.PullRequest{}
-	for _, p := range prs {
+func (m *MaintainerManager) worker(controller chan<- int, prepr <-chan *gh.PullRequest, pospr chan<- *gh.PullRequest, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for p := range prepr {
 		prfs, err := m.GetPullRequestFiles(strconv.Itoa(p.Number))
 		if err != nil {
-			return nil, err
+			return
 		}
 		for _, prf := range prfs {
 			dirPath := filepath.Dir(prf.FileName)
-			paths := m.maintainerDirMap.paths
-			i := sort.SearchStrings(paths, dirPath)
-			if i < len(paths) && paths[i] == dirPath {
-				filteredPrs = append(filteredPrs, p)
+			i := sort.SearchStrings((*m.maintainerDirMap).paths, dirPath)
+			if i < len(m.maintainerDirMap.paths) && (*m.maintainerDirMap).paths[i] == dirPath {
+				pospr <- p
 				break
 			}
 		}
 		fmt.Printf(".")
 	}
-	return filteredPrs, nil
+	controller <- 1
+}
+
+func (m *MaintainerManager) filterPullResquests(prs []*gh.PullRequest) []*gh.PullRequest {
+	var (
+		prepr       = make(chan *gh.PullRequest, NumWorkers)
+		pospr       = make(chan *gh.PullRequest, NumWorkers)
+		controller  = make(chan int, NumWorkers)
+		wg          = &sync.WaitGroup{}
+		filteredPrs = []*gh.PullRequest{}
+		sum         int
+	)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for p := range pospr {
+			filteredPrs = append(filteredPrs, []*gh.PullRequest{p}...)
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := range controller {
+			sum += i
+			if sum == NumWorkers {
+				close(pospr)
+				close(controller)
+			}
+		}
+	}()
+
+	for i := 0; i < NumWorkers; i++ {
+		wg.Add(1)
+		go m.worker(controller, prepr, pospr, wg)
+	}
+
+	for _, p := range prs {
+		prepr <- p
+	}
+	close(prepr)
+
+	wg.Wait()
+
+	return filteredPrs
+}
+
+// Return all the pull requests that I care about
+func (m *MaintainerManager) GetPullRequestsThatICareAbout(showAll bool, state, sortQuery string) ([]*gh.PullRequest, error) {
+
+	if showAll {
+		return m.GetPullRequests(state, sortQuery)
+	}
+
+	prs, err := m.GetPullRequests(state, sortQuery)
+	if err != nil {
+		return nil, err
+	}
+	return m.filterPullResquests(prs), nil
 }
 
 // Return all pull requests
