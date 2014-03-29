@@ -554,7 +554,7 @@ func (m *MaintainerManager) GetFirstIssue(state, sortBy string) (*gh.Issue, erro
 // GetIssues queries the GithubAPI for all issues matching the state `state` and the
 // assignee `assignee`.
 // See http://developer.github.com/v3/issues/#list-issues-for-a-repository
-func (m *MaintainerManager) GetIssues(state, assignee string) ([]*gh.Issue, error) {
+func (m *MaintainerManager) GetIssues(state, assignee, labels string) ([]*gh.Issue, error) {
 	o := &gh.Options{}
 	o.QueryParams = map[string]string{
 		"sort":      "updated",
@@ -566,6 +566,9 @@ func (m *MaintainerManager) GetIssues(state, assignee string) ([]*gh.Issue, erro
 	// This will show all issues, assigned or not.
 	if assignee != "" {
 		o.QueryParams["assignee"] = assignee
+	}
+	if labels != "" {
+		o.QueryParams["labels"] = labels
 	}
 	prevSize := -1
 	page := 1
@@ -582,4 +585,12 @@ func (m *MaintainerManager) GetIssues(state, assignee string) ([]*gh.Issue, erro
 		fmt.Printf(".")
 	}
 	return all, nil
+}
+
+func (m *MaintainerManager) GetLabels() ([]*gh.Label, error) {
+	return m.client.Labels(m.repo)
+}
+
+func (m *MaintainerManager) ApplyLabels(number int, labels []string) error {
+	return m.client.AppyLabel(m.repo, &gh.Issue{Number: number}, labels)
 }

@@ -190,6 +190,13 @@ func DisplayIssues(c *cli.Context, v interface{}, notrunc bool) {
 func DisplayIssue(issue *gh.Issue, comments []gh.Comment) {
 	fmt.Fprint(os.Stdout, brush.Green("Issue:"), "\n")
 	fmt.Fprintf(os.Stdout, "No: %d\nTitle: %s\n\n", issue.Number, issue.Title)
+	if len(issue.Labels) > 0 {
+		o := []string{}
+		for _, l := range issue.Labels {
+			o = append(o, l.Name)
+		}
+		fmt.Fprintf(os.Stdout, "Labels: %s\n\n", brush.Yellow(strings.Join(o, ", ")))
+	}
 
 	lines := strings.Split(issue.Body, "\n")
 	for i, l := range lines {
@@ -241,4 +248,8 @@ func DisplayPatch(r io.Reader) error {
 		}
 	}
 	return nil
+}
+
+func DisplayLabel(label *gh.Label) {
+	fmt.Fprintf(os.Stdout, "%s\n", label.Name)
 }

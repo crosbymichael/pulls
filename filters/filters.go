@@ -39,12 +39,32 @@ func GetIssueFilter(c *cli.Context) IssuesFilter {
 	if c.Bool("new") {
 		filter = combineIssues(filter, newIssuesFilter)
 	}
+	if c.Bool("triage") {
+		filter = combineIssues(filter, func(issues []*gh.Issue, err error) ([]*gh.Issue, error) {
+			return filterTriage(issues, err)
+		})
+	}
 	if numVotes := c.Int("votes"); numVotes > 0 {
 		filter = func(issues []*gh.Issue, err error) ([]*gh.Issue, error) {
 			return voteIssuesFilter(issues, numVotes, err)
 		}
 	}
 	return filter
+}
+
+// only display issues without lables
+func filterTriage(issues []*gh.Issue, err error) ([]*gh.Issue, error) {
+	if err != nil {
+		return nil, err
+	}
+
+	out := []*gh.Issue{}
+	for _, i := range issues {
+		if len(i.Labels) == 0 {
+			out = append(out, i)
+		}
+	}
+	return out, nil
 }
 
 func combinePullRequests(filter, next PullRequestsFilter) PullRequestsFilter {

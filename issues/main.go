@@ -8,6 +8,8 @@ import (
 	"github.com/dotcloud/gordon/filters"
 	"os"
 	"path"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -66,53 +68,6 @@ func takeCmd(c *cli.Context) {
 
 }
 
-func buildQuery(c *cli.Context) string {
-	r, err := m.Repository()
-	if err != nil {
-		gordon.WriteError("%s", err)
-	}
-	// standard parameters
-	query := fmt.Sprintf("q=%s+repo:%s", c.Args()[0], r.FullName)
-	state := c.String("state")
-	if state == "" {
-		state = "open"
-	}
-	query += fmt.Sprintf("+state:%s", state)
-	// optional parameters
-	var optionalParameters = []string{
-		"author",
-		"assignee",
-		"mentions",
-		"commenter",
-		"involves",
-		"labels"}
-
-	for i := 0; i < len(optionalParameters); i++ {
-		param := optionalParameters[i]
-		value := c.String(param)
-		if value != "" {
-			query += fmt.Sprintf("+%s:%s", param, value)
-		}
-	}
-	return query
-}
-
-//Search for issues. You add some restrictions to the query. such:
-// authors, assignee, state, etc. Check the command help for more options.
-func searchCmd(c *cli.Context) {
-	if c.Args().Present() {
-		issues, err := m.GetIssuesFound(buildQuery(c))
-		if err != nil {
-			gordon.WriteError("%s", err)
-		}
-		fmt.Printf("%c[2K\r", 27)
-		gordon.DisplayIssues(c, issues, c.Bool("no-trunc"))
-	} else {
-		fmt.Fprintf(os.Stdout, "Please enter a search term")
-	}
-
-}
-
 func addComment(number, comment string) {
 	cmt, err := m.AddComment(number, comment)
 	if err != nil {
@@ -124,7 +79,7 @@ func addComment(number, comment string) {
 func mainCmd(c *cli.Context) {
 	if !c.Args().Present() {
 		filter := filters.GetIssueFilter(c)
-		issues, err := filter(m.GetIssues("open", c.String("assigned")))
+		issues, err := filter(m.GetIssues("open", c.String("assigned"), c.String("labels")))
 		if err != nil {
 			gordon.WriteError("Error getting issues: %s", err)
 		}
@@ -138,6 +93,11 @@ func mainCmd(c *cli.Context) {
 		number  = c.Args().Get(0)
 		comment = c.String("comment")
 	)
+
+	if labels := c.StringSlice("apply"); len(labels) > 0 {
+		addLables(number, labels)
+		return
+	}
 
 	if comment != "" {
 		addComment(number, comment)
@@ -155,6 +115,17 @@ func mainCmd(c *cli.Context) {
 		gordon.WriteError("%s", err)
 	}
 	gordon.DisplayIssue(issue, comments)
+}
+
+func addLables(number string, labels []string) {
+	n, err := strconv.Atoi(number)
+	if err != nil {
+		gordon.WriteError("%s", err)
+	}
+	if err := m.ApplyLabels(n, labels); err != nil {
+		gordon.WriteError("%s", err)
+	}
+	fmt.Printf("%s labels applied to %d\n", strings.Join(labels, ", "), n)
 }
 
 func authCmd(c *cli.Context) {
@@ -187,6 +158,17 @@ func authCmd(c *cli.Context) {
 	} else {
 		fmt.Fprintf(os.Stderr, "No token registered\n")
 		os.Exit(1)
+	}
+}
+
+func labelsCmd(c *cli.Context) {
+	labels, err := m.GetLabels()
+	if err != nil {
+		gordon.WriteError("%s", err)
+	}
+
+	for _, l := range labels {
+		gordon.DisplayLabel(l)
 	}
 }
 
