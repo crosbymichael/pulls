@@ -10,6 +10,7 @@ func loadCommands(app *cli.App) {
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{"remote", "origin", "git remote to treat as origin"},
+		cli.BoolFlag{"verbose", "show more verbose output on actions"},
 	}
 
 	// Filters modify what type of pr to display
