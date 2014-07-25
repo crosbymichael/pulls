@@ -9,9 +9,17 @@ import (
 	"strings"
 )
 
+var (
+	VerboseOutput = false
+)
+
 type remote struct {
 	Name string
 	Url  string
+}
+
+func PrintCommand(cmd *exec.Cmd) {
+	fmt.Fprintf(os.Stderr, "executing %q ...\n", strings.Join(cmd.Args, " "))
 }
 
 func Fatalf(format string, args ...interface{}) {
@@ -50,7 +58,11 @@ func GetRemoteUrl(remote string) (string, string, error) {
 }
 
 func GetMaintainerManagerEmail() (string, error) {
-	output, err := exec.Command("git", "config", "user.email").Output()
+	cmd := exec.Command("git", "config", "user.email")
+	if VerboseOutput {
+		PrintCommand(cmd)
+	}
+	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("git config user.email: %v", err)
 	}
@@ -59,7 +71,11 @@ func GetMaintainerManagerEmail() (string, error) {
 
 // Return the remotes for the current dir
 func getRemotes() ([]remote, error) {
-	output, err := exec.Command("git", "remote", "-v").Output()
+	cmd := exec.Command("git", "remote", "-v")
+	if VerboseOutput {
+		PrintCommand(cmd)
+	}
+	output, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
@@ -80,6 +96,9 @@ func getRemotes() ([]remote, error) {
 // Stdout and Stderr
 func Git(args ...string) error {
 	cmd := exec.Command("git", args...)
+	if VerboseOutput {
+		PrintCommand(cmd)
+	}
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 
@@ -87,9 +106,13 @@ func Git(args ...string) error {
 }
 
 func GetTopLevelGitRepo() (string, error) {
-	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
+	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	if VerboseOutput {
+		PrintCommand(cmd)
+	}
+	output, err := cmd.Output()
 	if err != nil {
 		return "", err
 	}
-	return strings.Trim(string(out), "\n"), nil
+	return strings.Trim(string(output), "\n"), nil
 }
