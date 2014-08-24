@@ -47,6 +47,9 @@ func takeCmd(c *cli.Context) {
 		if err != nil {
 			gordon.Fatalf("%s", err)
 		}
+		if user == nil {
+			gordon.Fatalf("No Username known - you probably need to use the `auth` option to configure your GitHub token")
+		}
 		if issue.Assignee.Login != "" && !c.Bool("overwrite") {
 			fmt.Printf("Use the flag --overwrite to take the issue from %s\n", issue.Assignee.Login)
 			return

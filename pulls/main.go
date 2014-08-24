@@ -279,6 +279,9 @@ func takeCmd(c *cli.Context) {
 	if err != nil {
 		gordon.Fatalf("%s", err)
 	}
+	if user == nil {
+		gordon.Fatalf("No Username known - you probably need to use the `auth` option to configure your GitHub token")
+	}
 	if pr.Assignee != nil && !c.Bool("steal") {
 		gordon.Fatalf("Use --steal to steal the PR from %s", pr.Assignee.Login)
 	}
@@ -308,6 +311,9 @@ func dropCmd(c *cli.Context) {
 	user, err := m.GetGithubUser()
 	if err != nil {
 		gordon.Fatalf("%s", err)
+	}
+	if user == nil {
+		gordon.Fatalf("No Username known - you probably need to use the `auth` option to configure your GitHub token")
 	}
 	if pr.Assignee == nil || pr.Assignee.Login != user.Login {
 		gordon.Fatalf("Can't drop %s: it's not yours.", number)
@@ -374,6 +380,10 @@ func sendCmd(c *cli.Context) {
 		if err != nil {
 			gordon.Fatalf("%v", err)
 		}
+		if user == nil {
+			gordon.Fatalf("No Username known - you probably need to use the `auth` option to configure your GitHub token")
+		}
+
 		repo, err := m.Repository()
 		if err != nil {
 			gordon.Fatalf("%v\n", err)
