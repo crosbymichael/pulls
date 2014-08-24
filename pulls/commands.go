@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/codegangsta/cli"
-	"github.com/docker/gordon"
 )
 
 func loadCommands(app *cli.App) {
@@ -10,7 +9,7 @@ func loadCommands(app *cli.App) {
 	app.Action = mainCmd
 
 	app.Flags = []cli.Flag{
-		cli.StringFlag{Name: "remote", Value: gordon.GetDefaultGitRemote(), Usage: "git remote to treat as origin"},
+		cli.StringFlag{Name: "remote", Value: "origin", Usage: "git remote to treat as origin"},
 	}
 
 	// Filters modify what type of pr to display
@@ -20,12 +19,12 @@ func loadCommands(app *cli.App) {
 		cli.StringFlag{Name: "state", Value: "open", Usage: "display prs based on their state"},
 		cli.BoolFlag{Name: "new", Usage: "display prs opened in the last 24 hours"},
 		cli.BoolFlag{Name: "mine", Usage: "display only PRs I care about based on the MAINTAINERS files"},
-		cli.StringFlag{Name: "maintainer", Value: "", Usage: "display only PRs a maintainer cares about based on the MAINTAINERS files"},
+		cli.StringFlag{Name: "maintainer", Usage: "display only PRs a maintainer cares about based on the MAINTAINERS files"},
 		cli.StringFlag{Name: "sort", Value: "updated", Usage: "sort the prs by (created, updated, popularity, long-running)"},
-		cli.StringFlag{Name: "assigned", Value: "", Usage: "display only prs assigned to a user"},
+		cli.StringFlag{Name: "assigned", Usage: "display only prs assigned to a user"},
 		cli.BoolFlag{Name: "unassigned", Usage: "display only unassigned prs"},
-		cli.StringFlag{Name: "dir", Value: "", Usage: "display only prs that touch this dir"},
-		cli.StringFlag{Name: "extension", Value: "", Usage: "display only prs that have files with this extension (no dot)"},
+		cli.StringFlag{Name: "dir", Usage: "display only prs that touch this dir"},
+		cli.StringFlag{Name: "extension", Usage: "display only prs that have files with this extension (no dot)"},
 		cli.BoolFlag{Name: "cleanup", Usage: "display only cleanup prs"},
 	}
 	app.Flags = append(app.Flags, filters...)
@@ -33,8 +32,8 @@ func loadCommands(app *cli.App) {
 	// Options modify how to display prs
 	options := []cli.Flag{
 		cli.BoolFlag{Name: "no-trunc", Usage: "don't truncate pr name"},
-		cli.StringFlag{Name: "user", Value: "", Usage: "display only prs from <user>"},
-		cli.StringFlag{Name: "comment", Value: "", Usage: "add a comment to the pr"},
+		cli.StringFlag{Name: "user", Usage: "display only prs from <user>"},
+		cli.StringFlag{Name: "comment", Usage: "add a comment to the pr"},
 	}
 	app.Flags = append(app.Flags, options...)
 
@@ -49,6 +48,9 @@ func loadCommands(app *cli.App) {
 			Name:   "comment",
 			Usage:  "Leave a comment on a pull request",
 			Action: commentCmd,
+			Flags: []cli.Flag{
+				cli.StringFlag{Name: "template", Usage: "use a template to reply"},
+			},
 		},
 		{
 			Name:   "comments",
@@ -60,8 +62,8 @@ func loadCommands(app *cli.App) {
 			Usage:  "Add a github token for authentication",
 			Action: authCmd,
 			Flags: []cli.Flag{
-				cli.StringFlag{Name: "add", Value: "", Usage: "add new token for authentication"},
-				cli.StringFlag{Name: "user", Value: "", Usage: "add github user name"},
+				cli.StringFlag{Name: "add", Usage: "add new token for authentication"},
+				cli.StringFlag{Name: "user", Usage: "add github user name"},
 			},
 		},
 		{
@@ -74,7 +76,7 @@ func loadCommands(app *cli.App) {
 			Usage:  "Merge a pull request",
 			Action: mergeCmd,
 			Flags: []cli.Flag{
-				cli.StringFlag{Name: "m", Value: "", Usage: "commit message for merge"},
+				cli.StringFlag{Name: "m", Usage: "commit message for merge"},
 				cli.BoolFlag{Name: "force", Usage: "merge a pull request that has not been approved"},
 			},
 		},
@@ -82,7 +84,6 @@ func loadCommands(app *cli.App) {
 			Name:   "close",
 			Usage:  "Close a pull request without merging it",
 			Action: closeCmd,
-			Flags:  []cli.Flag{},
 		},
 		{
 			Name:   "checkout",
@@ -111,7 +112,6 @@ func loadCommands(app *cli.App) {
 			Name:   "drop",
 			Usage:  "Give up ownership of a pull request assigned to you",
 			Action: dropCmd,
-			Flags:  []cli.Flag{},
 		},
 		{
 			Name:   "diff",
